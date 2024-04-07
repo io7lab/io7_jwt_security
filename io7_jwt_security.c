@@ -46,14 +46,12 @@ static int acl_check_callback(int event, void *event_data, void *userdata) {
 	}
 }
 
-static int basic_auth_callback(int event, void *event_data, void *userdata)
-{
+static int basic_auth_callback(int event, void *event_data, void *userdata) {
 	struct mosquitto_evt_basic_auth *ed = event_data;
 	const char *ip_address;
 
 	UNUSED(event);
 	UNUSED(userdata);
-	printf("\nBASIC AUTH PASS %s\n", ed->password);
 
 	ip_address = mosquitto_client_address(ed->client);
 	if(!strcmp(ip_address, "127.0.0.1")){
@@ -65,8 +63,7 @@ static int basic_auth_callback(int event, void *event_data, void *userdata)
 	}
 }
 
-int mosquitto_plugin_version(int supported_version_count, const int *supported_versions)
-{
+int mosquitto_plugin_version(int supported_version_count, const int *supported_versions) {
 	int i;
 
 	for(i=0; i<supported_version_count; i++){
@@ -77,25 +74,39 @@ int mosquitto_plugin_version(int supported_version_count, const int *supported_v
 	return -1;
 }
 
-int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, struct mosquitto_opt *opts, int opt_count)
-{
+int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, struct mosquitto_opt *opts, int opt_count) {
 	UNUSED(user_data);
 	UNUSED(opts);
 	UNUSED(opt_count);
 
 	mosq_pid = identifier;
 	int rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_ACL_CHECK, acl_check_callback, NULL, NULL);
-	UNUSED(rc);
-	return mosquitto_callback_register(mosq_pid, MOSQ_EVT_BASIC_AUTH, basic_auth_callback, NULL, NULL);
+	if (rc != MOSQ_ERR_SUCCESS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT ACL Callback Loading failed\n");
+		return rc;
+	}
+	rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_BASIC_AUTH, basic_auth_callback, NULL, NULL);
+	if (rc != MOSQ_ERR_SUCCESS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT AUTH Callback Loading failed\n");
+		return rc;
+	}
+	return MOSQ_ERR_SUCCESS;
 }
 
-int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count)
-{
+int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int opt_count) {
 	UNUSED(user_data);
 	UNUSED(opts);
 	UNUSED(opt_count);
 
 	int rc = mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_ACL_CHECK, acl_check_callback, NULL);
-	UNUSED(rc);
-	return mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_BASIC_AUTH, basic_auth_callback, NULL);
+	if (rc != MOSQ_ERR_SUCCESS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT ACL Callback Unloading failed\n");
+		return rc;
+	}
+	rc = mosquitto_callback_unregister(mosq_pid, MOSQ_EVT_BASIC_AUTH, basic_auth_callback, NULL);
+	if (rc != MOSQ_ERR_SUCCESS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT AUTH Callback Unloading failed\n");
+		return rc;
+	}
+	return MOSQ_ERR_SUCCESS;
 }

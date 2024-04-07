@@ -1,2 +1,3 @@
 .vscode
 io7_jwt_security.so
+mosquitto_jwt_plugin.so
