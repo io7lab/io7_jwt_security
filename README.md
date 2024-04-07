@@ -1,4 +1,4 @@
-# mosquitto_jwt_plugin
+# io7_jwt_security
 
 This is a specific purpose built plugin for the mosquitto that serves the io7 IOT platform
 
