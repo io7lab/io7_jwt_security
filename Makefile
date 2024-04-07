@@ -4,7 +4,7 @@ include $(MOSQUITTO_DIR)/config.mk
 
 .PHONY : all binary check clean reallyclean test install uninstall
 
-PLUGIN_NAME=mosquitto_auth_by_ip
+PLUGIN_NAME=mosquitto_jwt_plugin
 
 PLUGIN_CPPFLAGS=-I$(MOSQUITTO_DIR)/ -I$(MOSQUITTO_DIR)/include -I$(MOSQUITTO_DIR)/deps
 PLUGIN_CFLAGS=-Wall -ggdb -O2 -Wconversion -Wextra -fPIC
