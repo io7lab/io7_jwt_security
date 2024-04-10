@@ -15,4 +15,5 @@ For Alpine Linux
 - git clone https://github.com/io7lab/mosquitto_jwt_plugin.git
 - cd io7_jwt_security
 - modify the Makefile to point to the mosquitto build tree
+  - `MOSQUITTO_DIR=/work`
 - run `make`
