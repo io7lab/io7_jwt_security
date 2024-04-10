@@ -64,7 +64,7 @@ static int basic_auth_callback(int event, void *event_data, void *userdata) {
 	UNUSED(userdata);
 
 	regex_init();
-	jwt_conn_info_init(&conn_info, "192.168.82.183", 2009);
+	jwt_conn_info_init(&conn_info, "io7api", 2009);
 	int rc =  validateToken(ed->password);
 
 	if(rc) {
