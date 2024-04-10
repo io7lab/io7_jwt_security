@@ -1,8 +1,8 @@
-MOSQUITTO_DIR=/work/build/
+MOSQUITTO_DIR=/work/build
 
 include $(MOSQUITTO_DIR)/config.mk
 
-.PHONY : all binary check clean reallyclean test install uninstall
+.PHONY : all binary check clean reallyclean test install uninstall check_vars
 
 PLUGIN_NAME=io7_jwt_security
 
@@ -13,8 +13,16 @@ all : binary
 
 binary : ${PLUGIN_NAME}.so
 
-${PLUGIN_NAME}.so : ${PLUGIN_NAME}.c
+${PLUGIN_NAME}.so : ${PLUGIN_NAME}.c io7_jwt_util.h
 	$(CROSS_COMPILE)$(CC) $(PLUGIN_CPPFLAGS) $(PLUGIN_CFLAGS) $(PLUGIN_LDFLAGS)  -fPIC -shared $< -o $@
+
+check_vars:
+	@echo CROSS_COMPILE     : $(CROSS_COMPILE)
+	@echo CC                : $(CC) 
+	@echo PLUGIN_CPPFLAGS   : $(PLUGIN_CPPFLAGS) 
+	@echo PLUGIN_CFLAGS     : $(PLUGIN_CFLAGS) 
+	@echo PLUGIN_LDFLAGS    : $(PLUGIN_LDFLAGS)
+	@echo $(CROSS_COMPILE)$(CC) $(PLUGIN_CPPFLAGS) $(PLUGIN_CFLAGS) $(PLUGIN_LDFLAGS)  -fPIC -shared $< -o $@
 
 reallyclean : clean
 clean:
