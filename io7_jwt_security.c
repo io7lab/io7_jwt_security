@@ -5,6 +5,7 @@
 #include "mosquitto_plugin.h"
 #include "mosquitto.h"
 #include "mqtt_protocol.h"
+#include "io7_jwt_util.h"
 
 static mosquitto_plugin_id_t *mosq_pid = NULL;
 char topic_buffer[100];
@@ -18,11 +19,21 @@ int match_topic(const char *sub) {
     char* evt = strtok(NULL, "/");
 	UNUSED(devid);
 
-    if (!strcmp(topic_buffer, "iot3") && !strcmp(evt, "evt")) {
-            return MOSQ_ERR_SUCCESS;
-    } else {
-            return MOSQ_ERR_ACL_DENIED;
-    }
+	if (strcmp(topic_buffer, "iot3")) {		// if the first token is not "iot3"
+		return MOSQ_ERR_ACL_DENIED;
+	}
+	if (!strcmp(evt, "evt"))  { 				// if the third token is "evt"
+		return MOSQ_ERR_SUCCESS;
+	}
+
+	char* device = strtok(NULL, "/");
+	char* meta = strtok(NULL, "/");
+	if (!strcmp(evt, "mgmt") && !strcmp(device, "device") && !strcmp(meta, "meta") ) {
+		// if the third token is "mgmt", the fourth token is "device", and the fifth token is "meta"
+		return MOSQ_ERR_SUCCESS;
+	}
+
+	return MOSQ_ERR_ACL_DENIED;
 }
 
 static int acl_check_callback(int event, void *event_data, void *userdata) {
@@ -48,15 +59,16 @@ static int acl_check_callback(int event, void *event_data, void *userdata) {
 
 static int basic_auth_callback(int event, void *event_data, void *userdata) {
 	struct mosquitto_evt_basic_auth *ed = event_data;
-	const char *ip_address;
 
 	UNUSED(event);
 	UNUSED(userdata);
 
-	ip_address = mosquitto_client_address(ed->client);
-	if(!strcmp(ip_address, "127.0.0.1")){
+	regex_init();
+	jwt_conn_info_init(&conn_info, "192.168.82.183", 2009);
+	int rc =  validateToken(ed->password);
+
+	if(rc) {
 		/* Only allow connections from localhost */
-		mosquitto_log_printf(MOSQ_LOG_INFO, "\nYUP Hi %s\n", ed->username);
 		return MOSQ_ERR_SUCCESS;
 	}else{
 		return MOSQ_ERR_AUTH;
