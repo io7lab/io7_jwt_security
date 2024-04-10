@@ -1,5 +1,6 @@
 #include "config.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "mosquitto_broker.h"
 #include "mosquitto_plugin.h"
@@ -63,8 +64,24 @@ static int basic_auth_callback(int event, void *event_data, void *userdata) {
 	UNUSED(event);
 	UNUSED(userdata);
 
+	char authServer[50];
+	uint16_t authPort = 2009;
+
+	char* authServerEnv = getenv("JWT_AUTH_SERVER");
+	char* authPortEnv = getenv("JWT_AUTH_PORT");
+	if (authServerEnv != NULL) {
+		char *p = strtok(authServerEnv, "\"");
+		strcpy(authServer, p);
+	} else {
+		strcpy(authServer, "io7api");
+	}
+	if (authPortEnv != NULL) {
+		char *p = strtok(authPortEnv, "\"");
+		authPort = (uint16_t)atoi(p);
+	}
+
 	regex_init();
-	jwt_conn_info_init(&conn_info, "io7api", 2009);
+	jwt_conn_info_init(&conn_info, authServer, authPort);
 	int rc =  validateToken(ed->password);
 
 	if(rc) {
