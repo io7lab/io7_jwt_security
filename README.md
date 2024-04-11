@@ -2,7 +2,7 @@
 
 This is a mosquitto plugin. It may not be a well architected for the robustness and the future expandability.
 Rather it is built for the specific purpose to support the io7 IOT platform which is an educational IOT platform.
-So, it could be a good and easy resource to understand how to build the custom mosquitto plugin.  
+So, it could be a good and easy resource to understand how to build the custom mosquitto plugin, though.
 
 The requirements was like this.
 <img width="1624" alt="Screenshot 2024-04-11 at 10 53 21 AM" src="https://github.com/io7lab/io7_jwt_security/assets/13171662/9d2901a0-35e1-4cee-a9de-4f63cbd7e3a4">
