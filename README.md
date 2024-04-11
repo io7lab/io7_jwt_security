@@ -7,7 +7,7 @@ So, it could be a good and easy resource to understand how to build the custom m
 The requirements is like this.
 <img width="1624" alt="Screenshot 2024-04-11 at 10 53 21 AM" src="https://github.com/io7lab/io7_jwt_security/assets/13171662/9d2901a0-35e1-4cee-a9de-4f63cbd7e3a4">
 
-So this plugin is built to use the JWT as the MQTT login credential and it just allows subscription to `io7/+/evt/#` and `io7/+/mgmt/device/meta` and no publish authority.
+So this plugin is built to use the JWT as the MQTT login credential and it just allows subscription to `io7/+/evt/#` & `io7/+/mgmt/device/meta` and no publish authority.
 
 It is built quick and dirty to support this particular requirement only. So it's quite simple, hence it could help anyone understand the mosquitto plugin architecture and develop his/her own.
 
