@@ -212,7 +212,7 @@ int doGET(int fd, char* token, char* buffer) {
 }
 
 int validateToken(char* token) {
-	int isTokenValid = 0;
+	int resp200 = 0;
 	char buffer[BUFFER_SIZE];
 
 	int fd = socket_connect(conn_info);
@@ -222,14 +222,14 @@ int validateToken(char* token) {
     int count = split(buffer, "\n", list, 100);
 	for (int i = 0; i < count; i++) {
 		int rc = regexec(&httpRegex, list[i], 0, NULL, 0);
-		if (rc != REG_NOMATCH) {
+		if (rc != REG_NOMATCH) {							// if matches "HTTP/"
 			char* result[10];
 			int num = split(list[i], " ", result, 10);
 			if (num == -1) {
 				mosquitto_log_printf(MOSQ_LOG_ERR, "Too many tokens\n");
-				isTokenValid = 0;
+				resp200 = 0;
 			} else {
-				isTokenValid = atoi(result[1]) == 200 ? 1 : 0;
+				resp200 = atoi(result[1]) == 200 ? 1 : 0;
 			}
 		}
 	}
@@ -237,12 +237,19 @@ int validateToken(char* token) {
 	shutdown(fd, SHUT_RDWR); 
 	close(fd); 
 
-	int validPayload = strstr(list[count - 1], "{\"detail\"") ? 1 : 0;
+	int authorized = 0;
+	cJSON *auth = cJSON_Parse(list[count - 1]);				// list[count - 1] is the payload
+	if (auth == NULL) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Authorization Response JSON Parse Error\n");
+	} else {
+		cJSON *detail = cJSON_GetObjectItem(auth, "detail");
+		authorized = strstr(detail->valuestring, "Authorized") ? 1 : 0;
+	}
 
-	if (isTokenValid == 1 && validPayload) {
+	if (resp200 == 1 && authorized) {
 		mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Authorized");
 	} else {
 		mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Not Authorized");
 	}
-	return isTokenValid && validPayload;
+	return resp200 && authorized;
 }
