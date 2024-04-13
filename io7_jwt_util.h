@@ -19,13 +19,42 @@
 #define BUFFER_SIZE 1024
 
 struct jwt_conn_info {
-	char host[50];
-	char address[20];
+	char url[300];
+	char protocol[10];
+	char host[100];
 	uint16_t port;
+	char path[500];
+	char user[100];
+	char password[100];
+	char address[20];
 } conn_info;
 
 regex_t ipV4regex;
 regex_t httpRegex;
+
+void parseURL(char *url, struct jwt_conn_info *conn_info) {
+	char buffer[500];
+	char buffer2[500];
+	int port = 80;
+
+	bzero(conn_info->protocol, sizeof(conn_info->protocol));
+	bzero(conn_info->host, sizeof(conn_info->host));
+	bzero(conn_info->user, sizeof(conn_info->user));
+	bzero(conn_info->password, sizeof(conn_info->password));
+	bzero(conn_info->path, sizeof(conn_info->path));
+	bzero(conn_info->address, sizeof(conn_info->address));
+	strcpy(conn_info->url, url);
+
+	int rc = sscanf(url, "%99[^:]://%99[^\n]", conn_info->protocol, buffer);
+	rc = sscanf(buffer, "%99[^@]@%99[^\n]", buffer2, buffer);
+	if (rc == 2) {
+		rc = sscanf(buffer2, "%99[^:]:%99[^\n]", conn_info->user, conn_info->password);
+	}
+	rc = sscanf(buffer, "%99[^/]/%99[^\n]", buffer2, conn_info->path);
+	rc = sscanf(buffer2, "%99[^:]:%99d[^\n]", conn_info->host, &port);
+	conn_info->port = (uint16_t)port;
+
+}
 
 int split(char *buffer, char* delim, char* list[], int list_size) {
     // buffer : string buffer to split
@@ -97,20 +126,8 @@ int load_conn_info(struct jwt_conn_info *conn_info, char *config_file) {
 			return MOSQ_ERR_INVAL;
 		}
 
-		cJSON *host, *port;
-		host = cJSON_GetObjectItem(tree, "host");
-		port = cJSON_GetObjectItem(tree, "port");
-
-		if (host != NULL) {
-			strcpy(conn_info->host, host->valuestring);
-		}
-		if (port != NULL) {
-			if (port->type == cJSON_Number) {
-				conn_info->port = (uint16_t)port->valueint;
-			} else if (port->type == cJSON_String) {
-				conn_info->port = (uint16_t)atoi(port->valuestring);
-			}
-		}
+		cJSON *url = cJSON_GetObjectItem(tree, "url");
+		parseURL(url->valuestring, conn_info);
 	}
 
 	return 0;
@@ -173,8 +190,8 @@ int doGET(int fd, char* token, char* buffer) {
 	// it returns 0 on success
 	char request[200];
 	sprintf(request, "GET /users/validate_token HTTP/1.1\r\n");
-    char header1[100];
-	sprintf(header1, "Host: %s:%d", conn_info.host, conn_info.port);
+    char header1[200];
+	sprintf(header1, "Host: %s:%d", conn_info.host, (int)conn_info.port);
     char header2[] = "Accept: application/json";
 	char header3[300];
 	sprintf(header3, "Authorization: Bearer %s", token);
