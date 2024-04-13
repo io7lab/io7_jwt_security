@@ -12,6 +12,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <cjson/cJSON.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #define JWT_AUTH_PORT 2009
 #define JWT_AUTH_SERVER "io7api"
@@ -54,6 +56,18 @@ void parseURL(char *url, struct jwt_conn_info *conn_info) {
 	rc = sscanf(buffer2, "%99[^:]:%99d[^\n]", conn_info->host, &port);
 	conn_info->port = (uint16_t)port;
 
+}
+
+SSL_CTX* init_ssl_ctx() {
+    SSL_CTX *ctx;
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
+    ctx = SSL_CTX_new(SSLv23_client_method());
+    if (ctx == NULL) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "SSL_CTX init failed\n");
+    }
+    return ctx;
 }
 
 int split(char *buffer, char* delim, char* list[], int list_size) {
@@ -164,7 +178,7 @@ int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
 }
 
 //int socket_connect(char *add, in_port_t port){
-int socket_connect(struct jwt_conn_info conn_info){
+int socket_connect(struct jwt_conn_info conn_info, SSL_CTX* ssl_ctx, SSL **ssl){
 	struct sockaddr_in addr;
 	int on = 1, sock;     
 
@@ -181,10 +195,18 @@ int socket_connect(struct jwt_conn_info conn_info){
 		sock = -1;
 	}
 
+	if (ssl_ctx != NULL) {
+		*ssl = SSL_new(ssl_ctx);
+		SSL_set_fd(*ssl, sock);
+		if (SSL_connect(*ssl) != 1) {
+			mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : SSL connect error");
+		}
+	}
+
 	return sock;
 }
 
-int doGET(int fd, char* token, char* buffer) {
+int doGET(int fd, char* token, char* buffer, SSL *ssl) {
 	// this function sends a GET request to the server with the token
 	// and reads the response into the buffer
 	// it returns 0 on success
@@ -196,33 +218,26 @@ int doGET(int fd, char* token, char* buffer) {
 	char header3[300];
 	sprintf(header3, "Authorization: Bearer %s", token);
 
-    write(fd, request, strlen(request));
-    write(fd, header1, strlen(header1));
-    write(fd, "\r\n", strlen("\r\n"));
-    write(fd, header2, strlen(header2));
-    write(fd, "\r\n", strlen("\r\n"));
-    write(fd, header3, strlen(header3));
-    write(fd, "\r\n", strlen("\r\n"));
-    write(fd, "\r\n", strlen("\r\n"));
-
-    ssize_t bytes_received = recv(fd, buffer, BUFFER_SIZE, 0);
-    if (bytes_received < 0) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "Error receiving response");
-        return 1;
-    }
-    buffer[bytes_received] = '\0';
-
-	// the last line of the response is the payload
-	// if the payload is empty, there may be some data pending so re-read the response
-	char *payload = strrchr(buffer, '\n') + 1; 	// +1 to skip the newline character
-	if (strlen(payload) == 0) {					
-		mosquitto_log_printf(MOSQ_LOG_INFO, "Re-reading for the payload jwt authentication\n");
-		ssize_t bytes_received2 = recv(fd, buffer + bytes_received, BUFFER_SIZE - (long unsigned int)bytes_received, 0);
-		if (bytes_received2 < 0) {
-			mosquitto_log_printf(MOSQ_LOG_ERR, "Error receiving payload");
-			return 1;
-		}
-		buffer[bytes_received + bytes_received2] = '\0';
+	if (strstr(conn_info.protocol, "http")) {
+        write(fd, request, strlen(request));
+        write(fd, header1, strlen(header1));
+        write(fd, "\r\n", strlen("\r\n"));
+        write(fd, header2, strlen(header2));
+        write(fd, "\r\n", strlen("\r\n"));
+        write(fd, header3, strlen(header3));
+        write(fd, "\r\n", strlen("\r\n"));
+        write(fd, "\r\n", strlen("\r\n"));
+    	read(fd, buffer, BUFFER_SIZE - 1);
+	} else {
+        SSL_write(ssl, request, (int)strlen(request));
+        SSL_write(ssl, header1, (int)strlen(header1));
+        SSL_write(ssl, "\r\n", strlen("\r\n"));
+        SSL_write(ssl, header2, (int)strlen(header2));
+        SSL_write(ssl, "\r\n", strlen("\r\n"));
+        SSL_write(ssl, header3, (int)strlen(header3));
+        SSL_write(ssl, "\r\n", strlen("\r\n"));
+        SSL_write(ssl, "\r\n", strlen("\r\n"));
+    	SSL_read(ssl, buffer, BUFFER_SIZE - 1);
 	}
 
 	return 0;
@@ -231,9 +246,14 @@ int doGET(int fd, char* token, char* buffer) {
 int validateToken(char* token) {
 	int resp200 = 0;
 	char buffer[BUFFER_SIZE];
+	SSL_CTX *ssl_ctx = NULL;
+    SSL *ssl;
 
-	int fd = socket_connect(conn_info);
-	doGET(fd, token, (char*)&buffer);
+	if (strstr(conn_info.protocol, "https")) {
+		ssl_ctx = init_ssl_ctx();
+	}
+	int fd = socket_connect(conn_info, ssl_ctx, &ssl);
+	doGET(fd, token, (char*)&buffer, ssl);
 
 	char* list[200];
     int count = split(buffer, "\n", list, 100);
@@ -251,8 +271,14 @@ int validateToken(char* token) {
 		}
 	}
 
-	shutdown(fd, SHUT_RDWR); 
-	close(fd); 
+	if (ssl_ctx == NULL) {
+		shutdown(fd, SHUT_RDWR); 
+		close(fd); 
+	} else {
+		SSL_shutdown(ssl);
+    	close(fd);
+    	SSL_CTX_free(ssl_ctx);
+	}
 
 	int authorized = 0;
 	cJSON *auth = cJSON_Parse(list[count - 1]);				// list[count - 1] is the payload

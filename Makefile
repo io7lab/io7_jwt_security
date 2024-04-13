@@ -1,4 +1,4 @@
-MOSQUITTO_DIR=/work/build
+MOSQUITTO_DIR=/work
 
 include $(MOSQUITTO_DIR)/config.mk
 
