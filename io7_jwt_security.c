@@ -87,27 +87,18 @@ int mosquitto_plugin_version(int supported_version_count, const int *supported_v
 
 int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, struct mosquitto_opt *opts, int opt_count) {
 	UNUSED(user_data);
-	UNUSED(opts);
-	UNUSED(opt_count);
+	static char *config_file = NULL;
 
-	char authServer[50];
-	uint16_t authPort = 2009;
-
-	char* authServerEnv = getenv("JWT_AUTH_SERVER");
-	char* authPortEnv = getenv("JWT_AUTH_PORT");
-	if (authServerEnv != NULL) {
-		char *p = strtok(authServerEnv, "\"");
-		strcpy(authServer, p);
-	} else {
-		strcpy(authServer, "io7api");
-	}
-	if (authPortEnv != NULL) {
-		char *p = strtok(authPortEnv, "\"");
-		authPort = (uint16_t)atoi(p);
+	// get the config file name from the options
+	for(int i=0; i<opt_count; i++){
+		if(!strcasecmp(opts[i].key, "config_file")){
+			config_file = mosquitto_strdup(opts[i].value);
+			mosquitto_log_printf(MOSQ_LOG_INFO, "io7 jwt security plugin: config file is %s", config_file);
+			break;
+		}
 	}
 
-	regex_init();
-	jwt_conn_info_init(&conn_info, authServer, authPort);
+	jwt_conn_config_init(&conn_info, config_file);
 
 	mosq_pid = identifier;
 	int rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_ACL_CHECK, acl_check_callback, NULL, NULL);
@@ -138,5 +129,7 @@ int mosquitto_plugin_cleanup(void *user_data, struct mosquitto_opt *opts, int op
 		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT AUTH Callback Unloading failed\n");
 		return rc;
 	}
+
+	regex_free();
 	return MOSQ_ERR_SUCCESS;
 }

@@ -11,6 +11,10 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <cjson/cJSON.h>
+
+#define JWT_AUTH_PORT 2009
+#define JWT_AUTH_SERVER "io7api"
 
 #define BUFFER_SIZE 1024
 
@@ -51,14 +55,83 @@ int split(char *buffer, char* delim, char* list[], int list_size) {
     }
 }
 
-int jwt_conn_info_init(struct jwt_conn_info *conn_info, char* host, uint16_t port) {
-	// this sets the address, port, and token to conn_info glabal variable
-	// and it compiles the regex for ipV4 and HTTP to global variables
+int regex_init() {
+	// on success it returns 0
+	int rc = regcomp(&ipV4regex, 
+			"^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
+            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
+            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
+            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))$", REG_EXTENDED);
+	if (rc) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
+	} else {
+		rc = regcomp(&httpRegex, "HTTP/", REG_EXTENDED);
+		if (rc) {
+			mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
+		}
+	}
+	return rc;
+}
+
+void regex_free() {
+	regfree(&ipV4regex);
+	regfree(&httpRegex);
+}
+
+int load_conn_info(struct jwt_conn_info *conn_info, char *config_file) { 
+	FILE *fp;
+	char buffer[500];
+	bzero(buffer, sizeof(buffer));
+	cJSON *tree;
+
+	fp = fopen(config_file, "r");
+	if (NULL == fp) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JWT security plugin config file can't be opened.");
+	} else {
+		fread(buffer, 1, sizeof(buffer), fp);
+		fclose(fp);
+
+		tree = cJSON_Parse(buffer);
+		if (tree == NULL) {
+			mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JSON parsing failed for %s.", config_file);
+			return MOSQ_ERR_INVAL;
+		}
+
+		cJSON *host, *port;
+		host = cJSON_GetObjectItem(tree, "host");
+		port = cJSON_GetObjectItem(tree, "port");
+
+		if (host != NULL) {
+			strcpy(conn_info->host, host->valuestring);
+		}
+		if (port != NULL) {
+			if (port->type == cJSON_Number) {
+				conn_info->port = (uint16_t)port->valueint;
+			} else if (port->type == cJSON_String) {
+				conn_info->port = (uint16_t)atoi(port->valuestring);
+			}
+		}
+	}
+
+	return 0;
+}
+
+int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
+	// this sets the host, port, and token to conn_info glabal variable
+	// and it resolves and set the ip address with the regex for ipV4
 	//
 	struct hostent *hp;
-	conn_info->port = port;
-	strcpy(conn_info->host, host);
 
+	if (config_file == NULL) {
+		conn_info->port = JWT_AUTH_PORT;			// default port
+		strcpy(conn_info->host, JWT_AUTH_SERVER);	// default host
+	} else {
+		load_conn_info(conn_info, config_file);
+	}
+
+	regex_init();
+
+	char *host = conn_info->host;
 	int rc = regexec(&ipV4regex, host, 0, NULL, 0);
 	if (rc == REG_NOMATCH) {
 		if((hp = gethostbyname(host)) == NULL){
@@ -92,24 +165,6 @@ int socket_connect(struct jwt_conn_info conn_info){
 	}
 
 	return sock;
-}
-
-int regex_init() {
-	// on success it returns 0
-	int rc = regcomp(&ipV4regex, 
-			"^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
-            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
-            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
-            "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))$", REG_EXTENDED);
-	if (rc) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
-	} else {
-		rc = regcomp(&httpRegex, "HTTP/", REG_EXTENDED);
-		if (rc) {
-			mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
-		}
-	}
-	return rc;
 }
 
 int doGET(int fd, char* token, char* buffer) {
