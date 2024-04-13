@@ -97,6 +97,14 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 			break;
 		}
 	}
+	if (config_file == NULL) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "");
+		mosquitto_log_printf(MOSQ_LOG_ERR, "=== io7 jwt Config file is unknown! ===");
+		mosquitto_log_printf(MOSQ_LOG_ERR, "=== io7 Management Web will not get the event update ===");
+		mosquitto_log_printf(MOSQ_LOG_ERR, "=== Please provide the config file path ===");
+		mosquitto_log_printf(MOSQ_LOG_ERR, "");
+		return MOSQ_ERR_SUCCESS;
+	}
 
 	jwt_conn_config_init(&conn_info, config_file);
 

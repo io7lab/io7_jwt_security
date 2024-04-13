@@ -210,6 +210,9 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
 	// this function sends a GET request to the server with the token
 	// and reads the response into the buffer
 	// it returns 0 on success
+	long int bytes_read = 0;
+	char *payload;
+
 	char request[200];
 	sprintf(request, "GET /users/validate_token HTTP/1.1\r\n");
     char header1[200];
@@ -227,7 +230,11 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         write(fd, header3, strlen(header3));
         write(fd, "\r\n", strlen("\r\n"));
         write(fd, "\r\n", strlen("\r\n"));
-    	read(fd, buffer, BUFFER_SIZE - 1);
+    	bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
+		payload = strrchr(buffer, '\n') + 1; 		// +1 to skip the newline character
+		if (strlen(payload) == 0) {	
+ 		   	read(fd, buffer + bytes_read, BUFFER_SIZE - 1);
+		}
 	} else {
         SSL_write(ssl, request, (int)strlen(request));
         SSL_write(ssl, header1, (int)strlen(header1));
@@ -237,7 +244,11 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         SSL_write(ssl, header3, (int)strlen(header3));
         SSL_write(ssl, "\r\n", strlen("\r\n"));
         SSL_write(ssl, "\r\n", strlen("\r\n"));
-    	SSL_read(ssl, buffer, BUFFER_SIZE - 1);
+    	bytes_read = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
+		payload = strrchr(buffer, '\n') + 1; 		// +1 to skip the newline character
+		if (strlen(payload) == 0) {	
+ 		   	SSL_read(ssl, buffer + bytes_read, BUFFER_SIZE - 1);
+		}
 	}
 
 	return 0;
