@@ -156,6 +156,7 @@ int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
 	if (config_file == NULL) {
 		conn_info->port = JWT_AUTH_PORT;			// default port
 		strcpy(conn_info->host, JWT_AUTH_SERVER);	// default host
+		strcpy(conn_info->protocol, "http");
 	} else {
 		load_conn_info(conn_info, config_file);
 	}
@@ -264,6 +265,11 @@ int validateToken(char* token) {
 		ssl_ctx = init_ssl_ctx();
 	}
 	int fd = socket_connect(conn_info, ssl_ctx, &ssl);
+	if (fd == -1) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : socket connect error");
+		return 0;				// can't authorize
+	}
+
 	doGET(fd, token, (char*)&buffer, ssl);
 
 	char* list[200];
