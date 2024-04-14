@@ -9,11 +9,21 @@ The requirements is like this.
 
 So this plugin is built to use the JWT as the MQTT login credential and it just allows subscription to `io7/+/evt/#` & `io7/+/mgmt/device/meta` and no publish authority.
 
-It is built quick and dirty to support this particular requirement only. So it's quite simple, hence it could help anyone understand the mosquitto plugin architecture and develop his/her own.
+It is built to support this particular requirement only. So it's quite simple, hence it could help anyone understand the mosquitto plugin architecture and develop his/her own.
+### configuration file
+The default configuration by the io7-platform-cloud installation script is working fine. But for any reason, for example splitting the containers on to different servers or the like, there is a way to configure the JWT Authentication Server.
 
-The official eclipse-mosquitto docker container uses Alpine Linux, so this plugin needs to be built on the Alpine.
+In the mosquitto.conf, you need to add `plugin_opt_config_file /mosquitto/config/your-jwt-security.json` and create the json file in this form.
+
+```json
+{
+  "url" : "http://io7api:2009/users/validateToken"
+}
+```
+
 
 ### Build Instruction
+The official eclipse-mosquitto docker container uses Alpine Linux, so this plugin needs to be built on the Alpine.
 
 For Alpine Linux
 - apk add make g++ openssl-dev cjson-dev docbook-xsl git
