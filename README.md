@@ -11,7 +11,7 @@ So this plugin is built to use the JWT as the MQTT login credential and it just 
 
 It is built to support this particular requirement only. So it's quite simple, hence it could help anyone understand the mosquitto plugin architecture and develop his/her own.
 ### configuration file
-The default configuration by the io7-platform-cloud installation script is working fine. But for any reason, for example splitting the containers on to different servers or the like, there is a way to configure the JWT Authentication Server.
+The default configuration by the io7-platform-cloud installation script is working fine. But for any reason, for example deploying the containers on to different servers or the like, there is a way to configure the JWT Authentication Server.
 
 In the mosquitto.conf, you need to add `plugin_opt_config_file /mosquitto/config/your-jwt-security.json` and create the json file in this form.
 
