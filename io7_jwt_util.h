@@ -222,7 +222,7 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
 	char header3[300];
 	sprintf(header3, "Authorization: Bearer %s", token);
 
-	if (strstr(conn_info.protocol, "http")) {
+	if (!strcmp(conn_info.protocol, "http")) {
         write(fd, request, strlen(request));
         write(fd, header1, strlen(header1));
         write(fd, "\r\n", strlen("\r\n"));
@@ -261,7 +261,7 @@ int validateToken(char* token) {
 	SSL_CTX *ssl_ctx = NULL;
     SSL *ssl;
 
-	if (strstr(conn_info.protocol, "https")) {
+	if (!strcmp(conn_info.protocol, "https")) {
 		ssl_ctx = init_ssl_ctx();
 	}
 	int fd = socket_connect(conn_info, ssl_ctx, &ssl);
@@ -303,7 +303,7 @@ int validateToken(char* token) {
 		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Authorization Response JSON Parse Error\n");
 	} else {
 		cJSON *detail = cJSON_GetObjectItem(auth, "detail");
-		authorized = strstr(detail->valuestring, "Authorized") ? 1 : 0;
+		authorized = strcmp(detail->valuestring, "Authorized") ? 0 : 1;
 	}
 
 	if (resp200 == 1 && authorized) {

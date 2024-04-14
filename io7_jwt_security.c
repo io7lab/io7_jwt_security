@@ -67,7 +67,6 @@ static int basic_auth_callback(int event, void *event_data, void *userdata) {
 	int rc =  validateToken(ed->password);
 
 	if(rc) {
-		/* Only allow connections from localhost */
 		return MOSQ_ERR_SUCCESS;
 	}else{
 		return MOSQ_ERR_AUTH;
