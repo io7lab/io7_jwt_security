@@ -97,10 +97,15 @@ int mosquitto_plugin_init(mosquitto_plugin_id_t *identifier, void **user_data, s
 		}
 	}
 
-	jwt_conn_config_init(&conn_info, config_file);
+	int rc = jwt_conn_config_init(&conn_info, config_file);
+	if (rc != MOSQ_ERR_SUCCESS) {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "io7 jwt security plugin init failed");
+		mosquitto_log_printf(MOSQ_LOG_ERR, "io7 jwt security plugin will not be loaded");
+		return MOSQ_ERR_SUCCESS;
+	}
 
 	mosq_pid = identifier;
-	int rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_ACL_CHECK, acl_check_callback, NULL, NULL);
+	rc = mosquitto_callback_register(mosq_pid, MOSQ_EVT_ACL_CHECK, acl_check_callback, NULL, NULL);
 	if (rc != MOSQ_ERR_SUCCESS) {
 		mosquitto_log_printf(MOSQ_LOG_ERR, "IO7 JWT ACL Callback Loading failed\n");
 		return rc;

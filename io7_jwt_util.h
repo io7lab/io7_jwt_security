@@ -58,6 +58,48 @@ void parseURL(char *url, struct jwt_conn_info *conn_info) {
 
 }
 
+int isSSLConnection(char *address, uint16_t port) {
+    int sock;
+    struct sockaddr_in server;
+
+    // Create socket
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == -1) {
+        return 1;
+    }
+
+    inet_aton(address, &server.sin_addr);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+
+    // Connect to remote server
+    if (connect(sock, (struct sockaddr *)&server, sizeof(server)) < 0) {
+        return 2;
+    }
+
+    // Initialize SSL
+    SSL_library_init();
+    SSL_CTX *ssl_ctx = SSL_CTX_new(TLS_client_method());
+    if (!ssl_ctx) {
+        return 3;
+    }
+    SSL *ssl = SSL_new(ssl_ctx);
+    SSL_set_fd(ssl, sock);
+
+    // Perform SSL handshake
+    if (SSL_connect(ssl) != 1) {
+        return 4;
+    }
+    
+    // Clean up
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    SSL_CTX_free(ssl_ctx);
+    close(sock);
+
+    return 0;
+}
+
 SSL_CTX* init_ssl_ctx() {
     SSL_CTX *ctx;
     SSL_library_init();
@@ -175,7 +217,16 @@ int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
 		strcpy(conn_info->address, host);
 	}
 
-	return 0;
+	// compare the protocol and the actual connection here
+	int result = isSSLConnection(conn_info->address, conn_info->port);
+	if ((result == 0 && !strcmp(conn_info->protocol, "https")) || (result != 0 && !strcmp(conn_info->protocol, "http")))  {
+		// Check if SSL handshake was successful
+		mosquitto_log_printf(MOSQ_LOG_INFO, "SSL Connection to JWT Auth Server Successful");
+		return 0;
+	} else {
+		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Auth Server Configuration Error");
+		return 1;
+	}
 }
 
 //int socket_connect(char *add, in_port_t port){
