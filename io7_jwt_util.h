@@ -19,6 +19,7 @@
 #define JWT_AUTH_SERVER "io7api"
 
 #define BUFFER_SIZE 1024
+#define HTTPS_SERVER (0)
 
 struct jwt_conn_info {
 	char url[300];
@@ -195,15 +196,14 @@ int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
 	//
 	struct hostent *hp;
 
+	regex_init();
+
 	if (config_file == NULL) {
 		conn_info->port = JWT_AUTH_PORT;			// default port
 		strcpy(conn_info->host, JWT_AUTH_SERVER);	// default host
-		strcpy(conn_info->protocol, "http");
 	} else {
 		load_conn_info(conn_info, config_file);
 	}
-
-	regex_init();
 
 	char *host = conn_info->host;
 	int rc = regexec(&ipV4regex, host, 0, NULL, 0);
@@ -219,7 +219,15 @@ int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
 
 	// compare the protocol and the actual connection here
 	int result = isSSLConnection(conn_info->address, conn_info->port);
-	if ((result == 0 && !strcmp(conn_info->protocol, "https")) || (result != 0 && !strcmp(conn_info->protocol, "http")))  {
+	if (strlen(conn_info->protocol) == 0) {
+		if (result == HTTPS_SERVER ) {
+			strcpy(conn_info->protocol, "https");
+		} else {
+			strcpy(conn_info->protocol, "http");
+		}
+	}
+	if ((result == HTTPS_SERVER && !strcmp(conn_info->protocol, "https"))
+		|| (result != HTTPS_SERVER && !strcmp(conn_info->protocol, "http")))  {
 		// Check if SSL handshake was successful
 		mosquitto_log_printf(MOSQ_LOG_INFO, "SSL Connection to JWT Auth Server Successful");
 		return 0;
