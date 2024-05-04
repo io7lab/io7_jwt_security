@@ -22,40 +22,40 @@
 #define HTTPS_SERVER (0)
 
 struct jwt_conn_info {
-	char url[300];
-	char protocol[10];
-	char host[100];
-	uint16_t port;
-	char path[500];
-	char user[100];
-	char password[100];
-	char address[20];
+    char url[300];
+    char protocol[10];
+    char host[100];
+    uint16_t port;
+    char path[500];
+    char user[100];
+    char password[100];
+    char address[20];
 } conn_info;
 
 regex_t ipV4regex;
 regex_t httpRegex;
 
 void parseURL(char *url, struct jwt_conn_info *conn_info) {
-	char buffer[500];
-	char buffer2[500];
-	int port = 80;
+    char buffer[500];
+    char buffer2[500];
+    int port = 80;
 
-	bzero(conn_info->protocol, sizeof(conn_info->protocol));
-	bzero(conn_info->host, sizeof(conn_info->host));
-	bzero(conn_info->user, sizeof(conn_info->user));
-	bzero(conn_info->password, sizeof(conn_info->password));
-	bzero(conn_info->path, sizeof(conn_info->path));
-	bzero(conn_info->address, sizeof(conn_info->address));
-	strcpy(conn_info->url, url);
+    bzero(conn_info->protocol, sizeof(conn_info->protocol));
+    bzero(conn_info->host, sizeof(conn_info->host));
+    bzero(conn_info->user, sizeof(conn_info->user));
+    bzero(conn_info->password, sizeof(conn_info->password));
+    bzero(conn_info->path, sizeof(conn_info->path));
+    bzero(conn_info->address, sizeof(conn_info->address));
+    strcpy(conn_info->url, url);
 
-	int rc = sscanf(url, "%99[^:]://%99[^\n]", conn_info->protocol, buffer);
-	rc = sscanf(buffer, "%99[^@]@%99[^\n]", buffer2, buffer);
-	if (rc == 2) {
-		rc = sscanf(buffer2, "%99[^:]:%99[^\n]", conn_info->user, conn_info->password);
-	}
-	rc = sscanf(buffer, "%99[^/]/%99[^\n]", buffer2, conn_info->path);
-	rc = sscanf(buffer2, "%99[^:]:%99d[^\n]", conn_info->host, &port);
-	conn_info->port = (uint16_t)port;
+    int rc = sscanf(url, "%99[^:]://%99[^\n]", conn_info->protocol, buffer);
+    rc = sscanf(buffer, "%99[^@]@%99[^\n]", buffer2, buffer);
+    if (rc == 2) {
+        rc = sscanf(buffer2, "%99[^:]:%99[^\n]", conn_info->user, conn_info->password);
+    }
+    rc = sscanf(buffer, "%99[^/]/%99[^\n]", buffer2, conn_info->path);
+    rc = sscanf(buffer2, "%99[^:]:%99d[^\n]", conn_info->host, &port);
+    conn_info->port = (uint16_t)port;
 
 }
 
@@ -108,7 +108,7 @@ SSL_CTX* init_ssl_ctx() {
     SSL_load_error_strings();
     ctx = SSL_CTX_new(SSLv23_client_method());
     if (ctx == NULL) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "SSL_CTX init failed\n");
+        mosquitto_log_printf(MOSQ_LOG_ERR, "SSL_CTX init failed\n");
     }
     return ctx;
 }
@@ -142,146 +142,146 @@ int split(char *buffer, char* delim, char* list[], int list_size) {
 }
 
 int regex_init() {
-	// on success it returns 0
-	int rc = regcomp(&ipV4regex, 
-			"^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
+    // on success it returns 0
+    int rc = regcomp(&ipV4regex, 
+            "^([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
             "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
             "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))."
             "([0-9]|[1-9][0-9]|1([0-9][0-9])|2([0-4][0-9]|5[0-5]))$", REG_EXTENDED);
-	if (rc) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
-	} else {
-		rc = regcomp(&httpRegex, "HTTP/", REG_EXTENDED);
-		if (rc) {
-			mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
-		}
-	}
-	return rc;
+    if (rc) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
+    } else {
+        rc = regcomp(&httpRegex, "HTTP/", REG_EXTENDED);
+        if (rc) {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Could not compile regex\n");
+        }
+    }
+    return rc;
 }
 
 void regex_free() {
-	regfree(&ipV4regex);
-	regfree(&httpRegex);
+    regfree(&ipV4regex);
+    regfree(&httpRegex);
 }
 
 int load_conn_info(struct jwt_conn_info *conn_info, char *config_file) { 
-	FILE *fp;
-	char buffer[500];
-	bzero(buffer, sizeof(buffer));
-	cJSON *tree;
+    FILE *fp;
+    char buffer[500];
+    bzero(buffer, sizeof(buffer));
+    cJSON *tree;
 
-	fp = fopen(config_file, "r");
-	if (NULL == fp) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JWT security plugin config file can't be opened.");
-	} else {
-		fread(buffer, 1, sizeof(buffer), fp);
-		fclose(fp);
+    fp = fopen(config_file, "r");
+    if (NULL == fp) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JWT security plugin config file can't be opened.");
+    } else {
+        fread(buffer, 1, sizeof(buffer), fp);
+        fclose(fp);
 
-		tree = cJSON_Parse(buffer);
-		if (tree == NULL) {
-			mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JSON parsing failed for %s.", config_file);
-			return MOSQ_ERR_INVAL;
-		}
+        tree = cJSON_Parse(buffer);
+        if (tree == NULL) {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Error: JSON parsing failed for %s.", config_file);
+            return MOSQ_ERR_INVAL;
+        }
 
-		cJSON *url = cJSON_GetObjectItem(tree, "url");
-		parseURL(url->valuestring, conn_info);
-	}
+        cJSON *url = cJSON_GetObjectItem(tree, "url");
+        parseURL(url->valuestring, conn_info);
+    }
 
-	return 0;
+    return 0;
 }
 
 int jwt_conn_config_init(struct jwt_conn_info *conn_info, char *config_file) {
-	// this sets the host, port, and token to conn_info glabal variable
-	// and it resolves and set the ip address with the regex for ipV4
-	//
-	struct hostent *hp;
+    // this sets the host, port, and token to conn_info glabal variable
+    // and it resolves and set the ip address with the regex for ipV4
+    //
+    struct hostent *hp;
 
-	regex_init();
+    regex_init();
 
-	if (config_file == NULL) {
-		conn_info->port = JWT_AUTH_PORT;			// default port
-		strcpy(conn_info->host, JWT_AUTH_SERVER);	// default host
-	} else {
-		load_conn_info(conn_info, config_file);
-	}
+    if (config_file == NULL) {
+        conn_info->port = JWT_AUTH_PORT;            // default port
+        strcpy(conn_info->host, JWT_AUTH_SERVER);   // default host
+    } else {
+        load_conn_info(conn_info, config_file);
+    }
 
-	char *host = conn_info->host;
-	int rc = regexec(&ipV4regex, host, 0, NULL, 0);
-	if (rc == REG_NOMATCH) {
-		if((hp = gethostbyname(host)) == NULL){
-			mosquitto_log_printf(MOSQ_LOG_ERR, "Could not gethostbyname\n");
-			return 1;
-		}
-		strcpy(conn_info->address, inet_ntoa(*(struct in_addr *)hp->h_addr));
-	} else {
-		strcpy(conn_info->address, host);
-	}
+    char *host = conn_info->host;
+    int rc = regexec(&ipV4regex, host, 0, NULL, 0);
+    if (rc == REG_NOMATCH) {
+        if((hp = gethostbyname(host)) == NULL){
+            mosquitto_log_printf(MOSQ_LOG_ERR, "Could not gethostbyname\n");
+            return 1;
+        }
+        strcpy(conn_info->address, inet_ntoa(*(struct in_addr *)hp->h_addr));
+    } else {
+        strcpy(conn_info->address, host);
+    }
 
-	// compare the protocol and the actual connection here
-	int result = isSSLConnection(conn_info->address, conn_info->port);
-	if (strlen(conn_info->protocol) == 0) {
-		if (result == HTTPS_SERVER ) {
-			strcpy(conn_info->protocol, "https");
-		} else {
-			strcpy(conn_info->protocol, "http");
-		}
-	}
-	if ((result == HTTPS_SERVER && !strcmp(conn_info->protocol, "https"))
-		|| (result != HTTPS_SERVER && !strcmp(conn_info->protocol, "http")))  {
-		// Check if SSL handshake was successful
-		mosquitto_log_printf(MOSQ_LOG_INFO, "SSL Connection to JWT Auth Server Successful");
-		return 0;
-	} else {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Auth Server Configuration Error");
-		return 1;
-	}
+    // compare the protocol and the actual connection here
+    int result = isSSLConnection(conn_info->address, conn_info->port);
+    if (strlen(conn_info->protocol) == 0) {
+        if (result == HTTPS_SERVER ) {
+            strcpy(conn_info->protocol, "https");
+        } else {
+            strcpy(conn_info->protocol, "http");
+        }
+    }
+    if ((result == HTTPS_SERVER && !strcmp(conn_info->protocol, "https"))
+        || (result != HTTPS_SERVER && !strcmp(conn_info->protocol, "http")))  {
+        // Check if SSL handshake was successful
+        mosquitto_log_printf(MOSQ_LOG_INFO, "SSL Connection to JWT Auth Server Successful");
+        return 0;
+    } else {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Auth Server Configuration Error");
+        return 1;
+    }
 }
 
 //int socket_connect(char *add, in_port_t port){
 int socket_connect(struct jwt_conn_info conn_info, SSL_CTX* ssl_ctx, SSL **ssl){
-	struct sockaddr_in addr;
-	int on = 1, sock;     
+    struct sockaddr_in addr;
+    int on = 1, sock;     
 
-	inet_aton(conn_info.address, &addr.sin_addr);
-	addr.sin_port = htons(conn_info.port);
-	addr.sin_family = AF_INET;
-	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char *)&on, sizeof(int));
+    inet_aton(conn_info.address, &addr.sin_addr);
+    addr.sin_port = htons(conn_info.port);
+    addr.sin_family = AF_INET;
+    sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char *)&on, sizeof(int));
 
-	if(sock == -1){
-		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : setsockopt error");
-	} else if(connect(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) == -1){
-			mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : connect error");
-		sock = -1;
-	}
+    if(sock == -1){
+        mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : setsockopt error");
+    } else if(connect(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) == -1){
+            mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : connect error");
+        sock = -1;
+    }
 
-	if (ssl_ctx != NULL) {
-		*ssl = SSL_new(ssl_ctx);
-		SSL_set_fd(*ssl, sock);
-		if (SSL_connect(*ssl) != 1) {
-			mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : SSL connect error");
-		}
-	}
+    if (ssl_ctx != NULL) {
+        *ssl = SSL_new(ssl_ctx);
+        SSL_set_fd(*ssl, sock);
+        if (SSL_connect(*ssl) != 1) {
+            mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : SSL connect error");
+        }
+    }
 
-	return sock;
+    return sock;
 }
 
 int doGET(int fd, char* token, char* buffer, SSL *ssl) {
-	// this function sends a GET request to the server with the token
-	// and reads the response into the buffer
-	// it returns 0 on success
-	long int bytes_read = 0;
-	char *payload;
+    // this function sends a GET request to the server with the token
+    // and reads the response into the buffer
+    // it returns 0 on success
+    long int bytes_read = 0;
+    char *payload;
 
-	char request[200];
-	sprintf(request, "GET /users/validate_token HTTP/1.1\r\n");
+    char request[200];
+    sprintf(request, "GET /users/validate_token HTTP/1.1\r\n");
     char header1[200];
-	sprintf(header1, "Host: %s:%d", conn_info.host, (int)conn_info.port);
+    sprintf(header1, "Host: %s:%d", conn_info.host, (int)conn_info.port);
     char header2[] = "Accept: application/json";
-	char header3[300];
-	sprintf(header3, "Authorization: Bearer %s", token);
+    char header3[300];
+    sprintf(header3, "Authorization: Bearer %s", token);
 
-	if (!strcmp(conn_info.protocol, "http")) {
+    if (!strcmp(conn_info.protocol, "http")) {
         write(fd, request, strlen(request));
         write(fd, header1, strlen(header1));
         write(fd, "\r\n", strlen("\r\n"));
@@ -290,12 +290,12 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         write(fd, header3, strlen(header3));
         write(fd, "\r\n", strlen("\r\n"));
         write(fd, "\r\n", strlen("\r\n"));
-    	bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
-		payload = strrchr(buffer, '\n') + 1; 		// +1 to skip the newline character
-		if (strlen(payload) == 0) {	
- 		   	read(fd, buffer + bytes_read, BUFFER_SIZE - 1);
-		}
-	} else {
+        bytes_read = read(fd, buffer, BUFFER_SIZE - 1);
+        payload = strrchr(buffer, '\n') + 1;        // +1 to skip the newline character
+        if (strlen(payload) == 0) {    
+                read(fd, buffer + bytes_read, BUFFER_SIZE - 1);
+        }
+    } else {
         SSL_write(ssl, request, (int)strlen(request));
         SSL_write(ssl, header1, (int)strlen(header1));
         SSL_write(ssl, "\r\n", strlen("\r\n"));
@@ -304,71 +304,71 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         SSL_write(ssl, header3, (int)strlen(header3));
         SSL_write(ssl, "\r\n", strlen("\r\n"));
         SSL_write(ssl, "\r\n", strlen("\r\n"));
-    	bytes_read = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
-		payload = strrchr(buffer, '\n') + 1; 		// +1 to skip the newline character
-		if (strlen(payload) == 0) {	
- 		   	SSL_read(ssl, buffer + bytes_read, BUFFER_SIZE - 1);
-		}
-	}
+        bytes_read = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
+        payload = strrchr(buffer, '\n') + 1;        // +1 to skip the newline character
+        if (strlen(payload) == 0) {    
+                SSL_read(ssl, buffer + bytes_read, BUFFER_SIZE - 1);
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 int validateToken(char* token) {
-	int resp200 = 0;
-	char buffer[BUFFER_SIZE];
-	SSL_CTX *ssl_ctx = NULL;
+    int resp200 = 0;
+    char buffer[BUFFER_SIZE];
+    SSL_CTX *ssl_ctx = NULL;
     SSL *ssl;
 
-	if (!strcmp(conn_info.protocol, "https")) {
-		ssl_ctx = init_ssl_ctx();
-	}
-	int fd = socket_connect(conn_info, ssl_ctx, &ssl);
-	if (fd == -1) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : socket connect error");
-		return 0;				// can't authorize
-	}
+    if (!strcmp(conn_info.protocol, "https")) {
+        ssl_ctx = init_ssl_ctx();
+    }
+    int fd = socket_connect(conn_info, ssl_ctx, &ssl);
+    if (fd == -1) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "JWT : socket connect error");
+        return 0;                                           // can't authorize
+    }
 
-	doGET(fd, token, (char*)&buffer, ssl);
+    doGET(fd, token, (char*)&buffer, ssl);
 
-	char* list[200];
+    char* list[200];
     int count = split(buffer, "\n", list, 100);
-	for (int i = 0; i < count; i++) {
-		int rc = regexec(&httpRegex, list[i], 0, NULL, 0);
-		if (rc != REG_NOMATCH) {							// if matches "HTTP/"
-			char* result[10];
-			int num = split(list[i], " ", result, 10);
-			if (num == -1) {
-				mosquitto_log_printf(MOSQ_LOG_ERR, "Too many tokens\n");
-				resp200 = 0;
-			} else {
-				resp200 = atoi(result[1]) == 200 ? 1 : 0;
-			}
-		}
-	}
+    for (int i = 0; i < count; i++) {
+        int rc = regexec(&httpRegex, list[i], 0, NULL, 0);
+        if (rc != REG_NOMATCH) {                            // if matches "HTTP/"
+            char* result[10];
+            int num = split(list[i], " ", result, 10);
+            if (num == -1) {
+                mosquitto_log_printf(MOSQ_LOG_ERR, "Too many tokens\n");
+                resp200 = 0;
+            } else {
+                resp200 = atoi(result[1]) == 200 ? 1 : 0;
+            }
+        }
+    }
 
-	if (ssl_ctx == NULL) {
-		shutdown(fd, SHUT_RDWR); 
-		close(fd); 
-	} else {
-		SSL_shutdown(ssl);
-    	close(fd);
-    	SSL_CTX_free(ssl_ctx);
-	}
+    if (ssl_ctx == NULL) {
+        shutdown(fd, SHUT_RDWR); 
+        close(fd); 
+    } else {
+        SSL_shutdown(ssl);
+        close(fd);
+        SSL_CTX_free(ssl_ctx);
+    }
 
-	int authorized = 0;
-	cJSON *auth = cJSON_Parse(list[count - 1]);				// list[count - 1] is the payload
-	if (auth == NULL) {
-		mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Authorization Response JSON Parse Error\n");
-	} else {
-		cJSON *detail = cJSON_GetObjectItem(auth, "detail");
-		authorized = strcmp(detail->valuestring, "Authorized") ? 0 : 1;
-	}
+    int authorized = 0;
+    cJSON *auth = cJSON_Parse(list[count - 1]);             // list[count - 1] is the payload
+    if (auth == NULL) {
+        mosquitto_log_printf(MOSQ_LOG_ERR, "JWT Authorization Response JSON Parse Error\n");
+    } else {
+        cJSON *detail = cJSON_GetObjectItem(auth, "detail");
+        authorized = strcmp(detail->valuestring, "Authorized") ? 0 : 1;
+    }
 
-	if (resp200 == 1 && authorized) {
-		mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Authorized");
-	} else {
-		mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Not Authorized");
-	}
-	return resp200 && authorized;
+    if (resp200 == 1 && authorized) {
+        mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Authorized");
+    } else {
+        mosquitto_log_printf(MOSQ_LOG_INFO, "JWT Not Authorized");
+    }
+    return resp200 && authorized;
 }
