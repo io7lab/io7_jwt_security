@@ -28,6 +28,7 @@ The official eclipse-mosquitto docker container uses Alpine Linux, so this plugi
 Build Steps
 - docker run -it --name jwt_build -v ~/data/mosquitto:/mosquitto -v ./work:/work alpine
 - apk add make g++ openssl-dev cjson-dev docbook-xsl git
+- cd /work
 - git clone https://github.com/eclipse/mosquitto.git
 - cd to mosquitto and build by running `make`
 - cd plugins
