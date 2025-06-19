@@ -25,7 +25,8 @@ In the mosquitto.conf, you need to add `plugin_opt_config_file /mosquitto/config
 ### Build Instruction
 The official eclipse-mosquitto docker container uses Alpine Linux, so this plugin needs to be built on the Alpine.
 
-For Alpine Linux
+Build Steps
+- docker run -it --name jwt_build -v ~/data/mosquitto:/mosquitto -v ./work:/work alpine
 - apk add make g++ openssl-dev cjson-dev docbook-xsl git
 - git clone https://github.com/eclipse/mosquitto.git
 - cd to mosquitto and build by running `make`
