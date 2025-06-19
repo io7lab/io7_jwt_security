@@ -33,7 +33,7 @@ Build Steps
 - cd to mosquitto and build by running `make`
 - cd plugins
 - git clone https://github.com/io7lab/mosquitto_jwt_plugin.git
-- cd io7_jwt_security
+- cd mosquitto_jwt_plugin
 - modify the Makefile to point to the mosquitto build tree
   - `MOSQUITTO_DIR=/work`
 - run `make`
