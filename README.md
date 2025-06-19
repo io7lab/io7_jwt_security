@@ -35,5 +35,5 @@ Build Steps
 - git clone https://github.com/io7lab/mosquitto_jwt_plugin.git
 - cd mosquitto_jwt_plugin
 - modify the Makefile to point to the mosquitto build tree
-  - `MOSQUITTO_DIR=/work`
+  - `MOSQUITTO_DIR=/work` --> `MOSQUITTO_DIR=/work/mosquitto`
 - run `make`
