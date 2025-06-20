@@ -32,8 +32,8 @@ Build Steps
 - git clone https://github.com/eclipse/mosquitto.git
 - cd to mosquitto and build by running `make`
 - cd plugins
-- git clone https://github.com/io7lab/mosquitto_jwt_plugin.git
-- cd mosquitto_jwt_plugin
+- git clone https://github.com/io7lab/io7_jwt_security.git
+- cd io7_jwt_security
 - modify the Makefile to point to the mosquitto build tree
   - `MOSQUITTO_DIR=/work` --> `MOSQUITTO_DIR=/work/mosquitto`
 - run `make`
