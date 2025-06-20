@@ -295,9 +295,30 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         buffer[len_read1] = '\0';
         payload = strrchr(buffer, '\n') + 1;        // +1 to skip the newline character
         if (strlen(payload) == 0) {    
-                len_read2 = (int)read(fd, buffer + len_read1, BUFFER_SIZE - 1);
-                buffer[len_read1 + len_read2] = '\0';
+            mosquitto_log_printf(MOSQ_LOG_INFO, buffer);
+            /*  When the payload is not read at the first read(), this is the content so far,
+                and it needs to read again.
+
+                    HTTP/1.1 200 OK
+                    date: Fri, 20 Jun 2025 00:20:20 GMT
+                    server: uvicorn
+                    content-length: 86
+                    content-type: application/json
+            */
+            len_read2 = (int)read(fd, buffer + len_read1, BUFFER_SIZE - 1);
+            buffer[len_read1 + len_read2] = '\0';
         }
+        mosquitto_log_printf(MOSQ_LOG_INFO, buffer);
+        /* This is the complete response
+
+                HTTP/1.1 200 OK
+                date: Fri, 20 Jun 2025 00:20:20 GMT
+                server: uvicorn
+                content-length: 86
+                content-type: application/json
+                
+                {"detail":"Authorized","token":{"user":"io7@io7lab.com","expires":1750414816.3729782}}
+        */
     } else {
         SSL_write(ssl, request, (int)strlen(request));
         SSL_write(ssl, header1, (int)strlen(header1));
@@ -310,10 +331,12 @@ int doGET(int fd, char* token, char* buffer, SSL *ssl) {
         len_read1 = SSL_read(ssl, buffer, BUFFER_SIZE - 1);
         buffer[len_read1] = '\0';
         payload = strrchr(buffer, '\n') + 1;        // +1 to skip the newline character
-        if (strlen(payload) == 0) {    
-                len_read2 = SSL_read(ssl, buffer + len_read1, BUFFER_SIZE - 1);
-                buffer[len_read1 + len_read2] = '\0';
+        if (strlen(payload) == 0) {
+            mosquitto_log_printf(MOSQ_LOG_INFO, buffer);
+            len_read2 = SSL_read(ssl, buffer + len_read1, BUFFER_SIZE - 1);
+            buffer[len_read1 + len_read2] = '\0';
         }
+        mosquitto_log_printf(MOSQ_LOG_INFO, buffer);
     }
 
     return 0;
